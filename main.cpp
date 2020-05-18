@@ -10,6 +10,9 @@
 #include <mutex>
 
 template<class F, class Rep, class Period>
+class RepeatedTask;
+
+template<class F, class Rep, class Period>
 class RepeatedTaskImpl final
 {
 public:
@@ -40,7 +43,7 @@ public:
     RepeatedTaskImpl(const RepeatedTaskImpl&) = delete;
     RepeatedTaskImpl& operator=(const RepeatedTaskImpl&) = delete;
 
-public:
+protected:
     void run()
     {
         std::unique_lock lock(m_mutex);
@@ -60,6 +63,14 @@ public:
         m_cv.notify_one();
         m_stopped = true;
     }
+
+    bool isStopped() const noexcept
+    {
+        return m_stopped;
+    }
+
+private:
+    friend class RepeatedTask<F, Rep, Period>;
 
 private:
     const callback_type m_f;

@@ -18,8 +18,9 @@ public:
 
     RepeatedTask() noexcept = default;
 
-    explicit RepeatedTask(callback_type f, const period_type& period) noexcept
-        : m_f(std::forward<callback_type>(f))
+    template<class Fp1, class Rep1 = std::chrono::nanoseconds::rep, class Period1 = std::chrono::nanoseconds::period>
+    RepeatedTask(Fp1&& f, const std::chrono::duration<Rep1, Period1>& period)
+        : m_f(std::forward<Fp1>(f))
         , m_period(period)
     {
         std::unique_lock<decltype(m_mutex)> lock(m_mutex);
@@ -142,5 +143,12 @@ private:
 
     std::thread m_thread;
 };
+
+#ifdef __cpp_deduction_guides
+
+template<class Fp1, class Rep1 = std::chrono::nanoseconds::rep, class Period1 = std::chrono::nanoseconds::period>
+RepeatedTask(Fp1, std::chrono::duration<Rep1, Period1>) -> RepeatedTask<Fp1, Rep1, Period1>;
+
+#endif
 
 #endif //EE8852D8_7930_4C63_AA9D_1A06652BC13C

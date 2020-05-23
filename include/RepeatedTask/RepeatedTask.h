@@ -51,11 +51,19 @@ public:
     }
 
     template<class Fp1, class Rep1, class Period1>
-    RepeatedTask& operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept
+    typename std::enable_if<std::is_same<RepeatedTask<Fp1, Rep1, Period1>, RepeatedTask>::value, RepeatedTask&>::type
+    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept
     {
         if (&other == this)
             return *this;
 
+        return operator=<Fp1, Rep1, Period1, std::true_type>(std::forward<RepeatedTask<Fp1, Rep1, Period1>>(other));
+    }
+
+    template<class Fp1, class Rep1, class Period1, class tag = std::false_type>
+    typename std::enable_if<!std::is_same<RepeatedTask<Fp1, Rep1, Period1>, RepeatedTask>::value || tag::value, RepeatedTask&>::type
+    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept
+    {
         std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
         const bool otherStopped = other.m_stopped;
         if (!otherStopped)

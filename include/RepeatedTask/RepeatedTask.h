@@ -35,7 +35,7 @@ public:
 
     RepeatedTask(RepeatedTask&& other) noexcept
     {
-        std::unique_lock<decltype(m_mutex)> otherLock(other.m_mutex);
+        std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
         const bool otherStopped = other.m_stopped;
         if (!otherStopped)
             other.stop(otherLock);
@@ -53,7 +53,10 @@ public:
     template<class Fp1, class Rep1, class Period1>
     RepeatedTask& operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept
     {
-        std::unique_lock<decltype(m_mutex)> otherLock(other.m_mutex);
+        if (&other == this)
+            return *this;
+
+        std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
         const bool otherStopped = other.m_stopped;
         if (!otherStopped)
             other.stop(otherLock);
@@ -63,7 +66,7 @@ public:
         m_f = std::move(other.m_f);
         m_period = other.m_period;
 
-        const bool& stopped = m_stopped;
+        const bool stopped = m_stopped;
         if (stopped && !otherStopped)
             start(lock);
         else if (!stopped && otherStopped)

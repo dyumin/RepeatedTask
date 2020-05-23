@@ -63,6 +63,7 @@ public:
 
         std::unique_lock<decltype(m_mutex)> lock(m_mutex);
 
+        static_assert(noexcept(m_f = std::move(other.m_f)));
         m_f = std::move(other.m_f);
         m_period = other.m_period;
 

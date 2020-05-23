@@ -35,7 +35,7 @@ public:
     }
 
     template<class Fp1, class Rep1, class Period1>
-    RepeatedTask(RepeatedTask<Fp1, Rep1, Period1>&& other)
+    RepeatedTask(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept(noexcept(m_f = std::move(other.m_f)))
     {
         std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
         const bool otherStopped = other.m_stopped;
@@ -54,7 +54,7 @@ public:
 
     template<class Fp1, class Rep1, class Period1>
     typename std::enable_if<std::is_same<RepeatedTask<Fp1, Rep1, Period1>, RepeatedTask>::value, RepeatedTask&>::type
-    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other)
+    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept(noexcept(operator=<Fp1, Rep1, Period1, std::true_type>(std::forward<RepeatedTask<Fp1, Rep1, Period1>>(other))))
     {
         if (&other == this)
             return *this;
@@ -64,7 +64,7 @@ public:
 
     template<class Fp1, class Rep1, class Period1, class tag = std::false_type>
     typename std::enable_if<!std::is_same<RepeatedTask<Fp1, Rep1, Period1>, RepeatedTask>::value || tag::value, RepeatedTask&>::type
-    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other)
+    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept(noexcept(m_f = std::move(other.m_f)))
     {
         std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
         const bool otherStopped = other.m_stopped;

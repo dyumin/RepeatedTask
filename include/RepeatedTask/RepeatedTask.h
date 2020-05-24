@@ -147,7 +147,7 @@ private:
 #ifdef __cpp_deduction_guides
 
 template<class Fp1, class Rep1 = std::chrono::nanoseconds::rep, class Period1 = std::chrono::nanoseconds::period>
-RepeatedTask(Fp1, std::chrono::duration<Rep1, Period1>) -> RepeatedTask<Fp1, Rep1, Period1>;
+RepeatedTask(Fp1&&, const std::chrono::duration<Rep1, Period1>&) -> RepeatedTask<Fp1, Rep1, Period1>;
 
 #endif
 

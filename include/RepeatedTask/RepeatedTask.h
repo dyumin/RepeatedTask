@@ -88,6 +88,15 @@ public:
     }
 #pragma clang diagnostic pop
 
+    // noncopyable
+    explicit RepeatedTask(const RepeatedTask&) = delete;
+    template<class Fp1, class Rep1, class Period1>
+    explicit RepeatedTask(const RepeatedTask<Fp1, Rep1, Period1>&) = delete;
+
+    RepeatedTask& operator=(const RepeatedTask&) = delete;
+    template<class Fp1, class Rep1, class Period1>
+    RepeatedTask& operator=(const RepeatedTask<Fp1, Rep1, Period1>&) = delete;
+
 private:
     template <class Lock>
     void start(Lock& lock)

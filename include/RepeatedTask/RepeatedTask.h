@@ -87,7 +87,7 @@ public:
 
 private:
     template <class Lock>
-    void start(Lock& lock) noexcept
+    void start(Lock& lock)
     {
         m_thread = std::thread(&RepeatedTask::run, this);
         m_cv.wait(lock, [&]()

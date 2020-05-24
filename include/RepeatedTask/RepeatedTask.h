@@ -35,17 +35,14 @@ public:
     }
 
     template<class Fp1, class Rep1, class Period1>
-    explicit RepeatedTask(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept(noexcept(m_f = std::move(other.m_f)))
+    explicit RepeatedTask(RepeatedTask<Fp1, Rep1, Period1>&& other)
     {
-        std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
-        const bool otherStopped = other.m_stopped;
-        if (!otherStopped)
-            other.stop(otherLock);
+        auto tmp = other.release();
 
-        m_f = std::move(other.m_f);
-        m_period = other.m_period;
+        m_f = std::move(std::get<0>(tmp));
+        m_period = std::get<1>(tmp);
 
-        if (!otherStopped)
+        if (!std::get<2>(tmp))
         {
             std::unique_lock<decltype(m_mutex)> lock(m_mutex);
             start(lock);
@@ -56,7 +53,7 @@ public:
 #pragma ide diagnostic ignored "misc-unconventional-assign-operator"
     template<class Fp1, class Rep1, class Period1>
     typename std::enable_if<std::is_same<RepeatedTask<Fp1, Rep1, Period1>, RepeatedTask>::value, RepeatedTask&>::type
-    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept(noexcept(operator=<Fp1, Rep1, Period1, std::true_type>(std::forward<RepeatedTask<Fp1, Rep1, Period1>>(other))))
+    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other)
     {
         if (&other == this)
             return *this;
@@ -66,19 +63,17 @@ public:
 
     template<class Fp1, class Rep1, class Period1, class tag = std::false_type>
     typename std::enable_if<!std::is_same<RepeatedTask<Fp1, Rep1, Period1>, RepeatedTask>::value || tag::value, RepeatedTask&>::type
-    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other) noexcept(noexcept(m_f = std::move(other.m_f)))
+    operator=(RepeatedTask<Fp1, Rep1, Period1>&& other)
     {
-        std::unique_lock<decltype(other.m_mutex)> otherLock(other.m_mutex);
-        const bool otherStopped = other.m_stopped;
-        if (!otherStopped)
-            other.stop(otherLock);
+        auto tmp = other.release();
 
         std::unique_lock<decltype(m_mutex)> lock(m_mutex);
 
-        m_f = std::move(other.m_f);
-        m_period = other.m_period;
+        m_f = std::move(std::get<0>(tmp));
+        m_period = std::get<1>(tmp);
 
         const bool stopped = m_stopped;
+        const bool otherStopped = std::get<2>(tmp);
         if (stopped && !otherStopped)
             start(lock);
         else if (!stopped && otherStopped)
@@ -87,6 +82,27 @@ public:
         return *this;
     }
 #pragma clang diagnostic pop
+
+    std::tuple<callback_type, period_type, bool> release()
+    {
+        std::unique_lock<decltype(m_mutex)> lock(m_mutex);
+        const bool stopped = m_stopped;
+        if (!stopped)
+            stop(lock);
+
+        auto tmp = std::make_tuple(std::move(m_f), m_period, stopped);
+
+#ifdef __cpp_if_constexpr
+        if constexpr (std::is_copy_constructible_v<callback_type> /*  */
+            && std::is_default_constructible_v<callback_type>
+            && (std::is_copy_assignable_v<callback_type> || std::is_move_assignable_v<callback_type>))
+            m_f = callback_type();
+#else
+        // Do the same old style
+        default_initializer::destroy(m_f);
+#endif
+        return tmp;
+    }
 
     // noncopyable
     explicit RepeatedTask(const RepeatedTask&) = delete;
@@ -142,6 +158,35 @@ private:
         m_stopped = true;
         m_cv.notify_one();
     }
+
+#ifndef __cpp_if_constexpr
+    struct default_initializer final
+    {
+        template<class T>
+        static void destroy(
+            T& f,
+            typename std::enable_if<
+                std::is_copy_constructible<T>::value
+             && std::is_default_constructible<T>::value
+             && (std::is_copy_assignable<T>::value || std::is_move_assignable<T>::value)
+            >::type* = 0 // todo: type* ?
+            )
+        {
+            f = T();
+        }
+
+        template<class T>
+        static void destroy(
+            T& f,
+            typename std::enable_if<
+              !(std::is_copy_constructible<T>::value
+             && std::is_default_constructible<T>::value
+             && (std::is_copy_assignable<T>::value || std::is_move_assignable<T>::value))
+            >::type* = 0
+        ) noexcept
+        {}
+    };
+#endif
 
 private:
     callback_type m_f;
